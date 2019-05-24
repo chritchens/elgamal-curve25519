@@ -10,18 +10,18 @@ pub struct Message([u8; 32]);
 
 impl Message {
     /// `new` creates a new `Message` from a slice of bytes.
-    pub fn new(_m: [u8; 32]) -> Message {
-        unreachable!()
+    pub fn new(m: [u8; 32]) -> Message {
+        Message(m)
     }
 
     /// `from_point` creates a new `Message` from a `CompressedRistretto`.
-    pub fn from_point(_s: CompressedRistretto) -> Result<Message, String> {
-        unreachable!()
+    pub fn from_point(p: &CompressedRistretto) -> Message {
+        Message(p.to_bytes())
     }
 
     /// `to_point` returns the inner `CompressedRistretto` of the `Message`.
-    pub fn to_point(&self) -> Result<CompressedRistretto, String> {
-        unreachable!()
+    pub fn to_point(&self) -> CompressedRistretto {
+        CompressedRistretto::from_slice(&self.0[..])
     }
 }
 
