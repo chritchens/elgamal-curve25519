@@ -3,6 +3,8 @@ use curve25519_dalek::ristretto::CompressedRistretto;
 use digest::Digest;
 use typenum::consts::U64;
 use rand_core::{RngCore, CryptoRng};
+use rand_os::OsRng;
+use subtle::ConstantTimeEq;
 
 /// `Message` is an `ElGamal` message.
 #[derive(Copy, Clone, Debug)]
@@ -35,15 +37,24 @@ pub struct PrivateKey(Scalar);
 impl PrivateKey {
     /// `new` creates a new random `PrivateKey`.
     pub fn new() -> Result<PrivateKey, String> {
-        unreachable!()
+        let mut rng = OsRng::new()
+            .map_err(|e| format!("{}", e))?;
+
+        PrivateKey::from_rng(&mut rng)
     }
 
     /// `from_rng` creates a new random `PrivateKey`, but requires
     /// to specify a random generator.
-    pub fn from_rng<R>(_rng: &mut R) -> Result<PrivateKey, String>
+    pub fn from_rng<R>(mut rng: &mut R) -> Result<PrivateKey, String>
         where R: RngCore + CryptoRng
     {
-        unreachable!()
+        let mut scalar = Scalar::random(&mut rng);
+        while scalar.ct_eq(&Scalar::zero()).unwrap_u8() == 1u8 {
+            scalar = Scalar::random(&mut rng);
+        }
+
+        let private = PrivateKey(scalar);
+        Ok(private)
     }
 
     /// `from_hash` creates a new `PrivateKey` from a 64 bytes hash.
