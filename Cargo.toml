@@ -1,0 +1,14 @@
+[package]
+name = "elgamal-curve25519"
+version = "0.1.0"
+authors = ["chritchens <chritchens@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+rand_core = "~0.3"
+rand_os = "~0.1"
+typenum = "~1.10"
+digest = "~0.8"
+sha2 = "~0.8"
+subtle = "~2.1"
+curve25519-dalek = "~1.1"
