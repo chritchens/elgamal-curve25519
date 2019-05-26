@@ -1,6 +1,6 @@
 use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::ristretto::{RistrettoPoint, CompressedRistretto};
-use curve25519_dalek::constants::RISTRETTO_BASEPOINT_TABLE;
+use curve25519_dalek::constants::{BASEPOINT_ORDER, RISTRETTO_BASEPOINT_TABLE};
 use digest::Digest;
 use typenum::consts::U64;
 use rand_core::{RngCore, CryptoRng};
@@ -219,11 +219,52 @@ pub struct CypherText {
 }
 
 /// `encrypt` encrypts a `Message` into a `CypherText`.
-pub fn encrypt(_msg: Message, _pk: PublicKey, _sk: PrivateKey) -> Result<CypherText, String> {
-    unreachable!()
+pub fn encrypt(msg: Message, pk: PublicKey, sk: PrivateKey) -> Result<CypherText, String> {
+    // s  = pk.to_point() * sk.to_scalar()
+    // c1 = RISTRETTO_BASEPOINT_TABLE * sk.to_scalar()
+    // c2 = m.to_point() * s
+    // (c1, c2)
+    if sk.to_public().to_point().ct_eq(&pk.to_point()).unwrap_u8() == 1u8 {
+        return Err("same private keys".into());
+    }
+
+    if let Some(pk_point) = pk.to_point().decompress() {
+        if let Some(msg_point) = msg.to_point().decompress() {
+            let sk_scalar = sk.to_scalar();
+            let shared = pk_point * sk_scalar;
+            let gamma_decomp = &RISTRETTO_BASEPOINT_TABLE * &sk_scalar;
+            let delta_decomp = msg_point + shared;
+            let gamma = gamma_decomp.compress();
+            let delta = delta_decomp.compress();
+
+            let cyph = CypherText { gamma, delta };
+            Ok(cyph)
+        } else {
+            Err("invalid message".into())
+        }
+    } else {
+        Err("invalid public key".into())
+    }
 }
 
 /// `decrypt` decrypts a `CypherText` into a `Message`.
-pub fn decrypt(_cyph: CypherText, _sk: PrivateKey) -> Result<Message, String> {
-    unreachable!()
+pub fn decrypt(cyph: CypherText, sk: PrivateKey) -> Result<Message, String> {
+    // s  = cyph.c1.to_point() * sk.to_scalar() [unused as we use the Lagrange Theorem]
+    // s' = cyph.c1.to_point() * (Scalar::from(ORDER)- Scalar::one(sk.to_scalar() - sk.to_scalar())
+    // m  = c2.to_point() * s'.to_point()
+    // m
+    if let Some(gamma_point) = cyph.gamma.decompress() {
+        if let Some(delta_point) = cyph.delta.decompress() {
+            let sk_scalar = sk.to_scalar();
+            let inv_shared = gamma_point * (BASEPOINT_ORDER - Scalar::one() - sk_scalar);
+            let msg_point = delta_point - inv_shared;
+
+            let msg = Message::from_point(&msg_point.compress());
+            Ok(msg)
+        } else {
+            Err("invalid delta".into())
+        }
+    } else {
+        Err("invalid gamma".into())
+    }
 }
