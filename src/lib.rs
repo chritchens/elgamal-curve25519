@@ -58,31 +58,42 @@ impl PrivateKey {
     }
 
     /// `from_hash` creates a new `PrivateKey` from a 64 bytes hash.
-    pub fn from_hash<D>(_d: D) -> Result<PrivateKey, String>
+    pub fn from_hash<D>(digest: D) -> PrivateKey
         where D: Digest<OutputSize = U64>
     {
-        unreachable!()
+        let scalar = Scalar::from_hash(digest);
+        PrivateKey(scalar)
     }
 
     /// `from_scalar` creates a new `PrivateKey` from a `Scalar`.
     /// The `Scalar` value cannot be 0.
-    pub fn from_scalar(_s: Scalar) -> Result<PrivateKey, String> {
-        unreachable!()
+    pub fn from_scalar(scalar: Scalar) -> Result<PrivateKey, String> {
+        if scalar.ct_eq(&Scalar::zero()).unwrap_u8() == 1u8 {
+            return Err("0 scalar".into());
+        }
+
+        let private = PrivateKey(scalar);
+        Ok(private)
     }
 
     /// `to_scalar` returns the inner `Scalar` of the `PrivateKey`.
-    pub fn to_scalar(&self) -> Result<Scalar, String> {
-        unreachable!()
+    pub fn to_scalar(&self) -> Scalar {
+        self.0
     }
 
     /// `from_slice` creates a new `PrivateKey` from a slice of bytes.
-    pub fn from_slice(_s: [u8; 32]) -> Result<PrivateKey, String> {
-        unreachable!()
+    pub fn from_slice(buf: [u8; 32]) -> Result<PrivateKey, String> {
+        if let Some(scalar) = Scalar::from_canonical_bytes(buf) {
+            let private = PrivateKey(scalar);
+            Ok(private)
+        } else {
+            Err("not canonical bytes".into())
+        }
     }
 
     /// `to_bytes` returns the `PrivateKey` as an array of bytes.
-    pub fn to_bytes(&self) -> Result<[u8; 32], String> {
-        unreachable!()
+    pub fn to_bytes(&self) -> [u8; 32] {
+        self.0.to_bytes()
     }
 }
 
