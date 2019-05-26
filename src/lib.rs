@@ -17,6 +17,32 @@ impl Message {
         Message(msg)
     }
 
+    /// `random` creates a new random `Message`.
+    pub fn random() -> Result<Message, String> {
+        let mut rng = OsRng::new()
+            .map_err(|e| format!("{}", e))?;
+
+        let msg = Message::from_rng(&mut rng);
+        Ok(msg)
+    }
+
+    /// `from_rng` creates a new random `Message`, but requires
+    /// to specify a random generator.
+    pub fn from_rng<R>(mut rng: &mut R) -> Message
+        where R: RngCore + CryptoRng
+    {
+        let point = RistrettoPoint::random(&mut rng).compress();
+        Message::from_point(&point)
+    }
+
+    /// `from_hash` creates a new `Message` from a 64 bytes hash.
+    pub fn from_hash<D>(digest: D) -> Message
+        where D: Digest<OutputSize = U64> + Default
+    {
+        let point = RistrettoPoint::from_hash(digest).compress();
+        Message::from_point(&point)
+    }
+
     /// `from_point` creates a new `Message` from a `CompressedRistretto`.
     pub fn from_point(point: &CompressedRistretto) -> Message {
         Message(point.to_bytes())
