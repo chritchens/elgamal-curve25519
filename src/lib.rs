@@ -112,8 +112,13 @@ impl PrivateKey {
 pub struct PublicKey(CompressedRistretto);
 
 impl PublicKey {
-    /// `new` creates a new random `PublicKey` from a `PrivateKey`.
+    /// `new` creates a new `PublicKey` from a `PrivateKey`.
     pub fn new(private: PrivateKey) -> PublicKey {
+        PublicKey::from_private(private)
+    }
+
+    /// `from_private` creates a new `PublicKey` from a `PrivateKey`.
+    pub fn from_private(private: PrivateKey) -> PublicKey {
         private.to_public()
     }
 
