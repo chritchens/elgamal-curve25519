@@ -1,5 +1,6 @@
 use curve25519_dalek::scalar::Scalar;
-use curve25519_dalek::ristretto::CompressedRistretto;
+use curve25519_dalek::ristretto::{RistrettoPoint, CompressedRistretto};
+use curve25519_dalek::constants::RISTRETTO_BASEPOINT_TABLE;
 use digest::Digest;
 use typenum::consts::U64;
 use rand_core::{RngCore, CryptoRng};
@@ -95,6 +96,12 @@ impl PrivateKey {
     pub fn to_bytes(&self) -> [u8; 32] {
         self.0.to_bytes()
     }
+
+    /// `to_public` returns the `PublicKey` of the `PrivateKey`.
+    pub fn to_public(&self) -> PublicKey {
+        let point = &self.0 * &RISTRETTO_BASEPOINT_TABLE;
+        PublicKey(point.compress())
+    }
 }
 
 /// `PublicKey` is an ElGamal public key. It's just a
@@ -106,35 +113,37 @@ pub struct PublicKey(CompressedRistretto);
 
 impl PublicKey {
     /// `new` creates a new random `PublicKey` from a `PrivateKey`.
-    pub fn new() -> Result<PublicKey, String> {
-        unreachable!()
+    pub fn new(private: PrivateKey) -> PublicKey {
+        private.to_public()
     }
 
     /// `from_point` creates a new `PublicKey` from a `CompressedRistretto`.
-    pub fn from_point() -> Result<PublicKey, String> {
-        unreachable!()
+    pub fn from_point(point: CompressedRistretto) -> PublicKey {
+        PublicKey(point)
     }
 
     /// `to_point` returns the inner `CompressedRistretto` of the `PublicKey`.
-    pub fn to_point(&self) -> Result<CompressedRistretto, String> {
-        unreachable!()
+    pub fn to_point(&self) -> CompressedRistretto {
+        self.0
     }
 
     /// `from_hash` creates a new `PublicKey` from a 64 bytes hash.
-    pub fn from_hash<D>(_d: D) -> Result<PublicKey, String>
-        where D: Digest<OutputSize = U64>
+    pub fn from_hash<D>(digest: D) -> PublicKey
+        where D: Digest<OutputSize = U64> + Default
     {
-        unreachable!()
+        let point = RistrettoPoint::from_hash(digest);
+        PublicKey(point.compress())
     }
 
     /// `from_slice` creates a new `PublicKey` from a slice of bytes.
-    pub fn from_slice(_s: [u8; 32]) -> Result<PublicKey, String> {
-        unreachable!()
+    pub fn from_slice(buf: [u8; 32]) -> PublicKey {
+        let point = CompressedRistretto::from_slice(&buf[..]);
+        PublicKey(point)
     }
 
     /// `to_bytes` returns the `PublicKey` as an array of bytes.
-    pub fn to_bytes(&self) -> Result<[u8; 32], String> {
-        unreachable!()
+    pub fn to_bytes(&self) -> [u8; 32] {
+        self.0.to_bytes()
     }
 }
 
