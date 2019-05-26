@@ -157,33 +157,52 @@ pub struct KeyPair {
 impl KeyPair {
     /// `new` creates a new random `KeyPair`.
     pub fn new() -> Result<KeyPair, String> {
-        unreachable!()
+        let private_key = PrivateKey::new()?;
+        let public_key = private_key.to_public();
+
+        let keys = KeyPair { public_key, private_key };
+        Ok(keys)
     }
 
     /// `from_rng` creates a new random `KeyPair`, but requires
     /// to specify a random generator.
-    pub fn from_rng<R>(_rng: &mut R) -> Result<KeyPair, String>
+    pub fn from_rng<R>(mut rng: &mut R) -> Result<KeyPair, String>
         where R: RngCore + CryptoRng
     {
-        unreachable!()
+        let private_key = PrivateKey::from_rng(&mut rng)?;
+        let public_key = private_key.to_public();
+
+        let keys = KeyPair { public_key, private_key };
+        Ok(keys)
     }
 
     /// `from_hash` creates a new `KeyPair` from a 64 bytes hash.
-    pub fn from_hash<D>(_d: D) -> Result<KeyPair, String>
+    pub fn from_hash<D>(digest: D) -> KeyPair
         where D: Digest<OutputSize = U64>
     {
-        unreachable!()
+        let private_key = PrivateKey::from_hash(digest);
+        let public_key = private_key.to_public();
+
+        KeyPair { public_key, private_key }
     }
 
     /// `from_scalar` creates a new `KeyPair` from a `Scalar`.
     /// The `Scalar` value cannot be 0.
-    pub fn from_scalar(_s: Scalar) -> Result<KeyPair, String> {
-        unreachable!()
+    pub fn from_scalar(scalar: Scalar) -> Result<KeyPair, String> {
+        let private_key = PrivateKey::from_scalar(scalar)?;
+        let public_key = private_key.to_public();
+
+        let keys = KeyPair { public_key, private_key };
+        Ok(keys)
     }
 
     /// `from_slice` creates a new `KeyPair` from a slice of bytes.
-    pub fn from_slice(_s: [u8; 32]) -> Result<KeyPair, String> {
-        unreachable!()
+    pub fn from_slice(buf: [u8; 32]) -> Result<KeyPair, String> {
+        let private_key = PrivateKey::from_slice(buf)?;
+        let public_key = private_key.to_public();
+
+        let keys = KeyPair { public_key, private_key };
+        Ok(keys)
     }
 }
 
