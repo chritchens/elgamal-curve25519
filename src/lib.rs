@@ -6,7 +6,7 @@ use rand_core::{RngCore, CryptoRng};
 use rand_os::OsRng;
 use subtle::ConstantTimeEq;
 
-/// `Message` is an `ElGamal` message.
+/// `Message` is an ElGamal message.
 #[derive(Copy, Clone, Debug)]
 pub struct Message([u8; 32]);
 
