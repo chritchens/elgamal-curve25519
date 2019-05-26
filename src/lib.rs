@@ -12,13 +12,13 @@ pub struct Message([u8; 32]);
 
 impl Message {
     /// `new` creates a new `Message` from a slice of bytes.
-    pub fn new(m: [u8; 32]) -> Message {
-        Message(m)
+    pub fn new(msg: [u8; 32]) -> Message {
+        Message(msg)
     }
 
     /// `from_point` creates a new `Message` from a `CompressedRistretto`.
-    pub fn from_point(p: &CompressedRistretto) -> Message {
-        Message(p.to_bytes())
+    pub fn from_point(point: &CompressedRistretto) -> Message {
+        Message(point.to_bytes())
     }
 
     /// `to_point` returns the inner `CompressedRistretto` of the `Message`.
