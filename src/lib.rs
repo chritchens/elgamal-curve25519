@@ -171,6 +171,22 @@ impl PrivateKey {
     }
 }
 
+impl Add<PrivateKey> for PrivateKey {
+    type Output = Option<PrivateKey>;
+
+    fn add(self, other: PrivateKey) -> Option<PrivateKey> {
+        let scalar = self.to_scalar();
+        let other_scalar = other.to_scalar();
+
+        let scalar = scalar + other_scalar;
+
+        match PrivateKey::from_scalar(scalar) {
+            Ok(sk) => Some(sk),
+            Err(_) => None,
+        }
+    }
+}
+
 /// `PublicKey` is an ElGamal public key. It's just a
 /// wrapper around `CompressedRistretto`.
 /// The key is computed as g^x, where g is the generator
@@ -546,4 +562,67 @@ fn test_cyphertext_add() {
 
     assert_eq!(cyph3.gamma, cyph3_gamma);
     assert_eq!(cyph3.delta, cyph3_delta);
+}
+
+#[test]
+fn test_encryption_message_sum() {
+    for _ in 0..10 {
+        let msg1 = Message::random().unwrap();
+        let msg2 = Message::random().unwrap();
+        let msg3_from_sum = (msg1 + msg2).unwrap();
+
+        let sk1 = PrivateKey::new().unwrap();
+        let sk2 = PrivateKey::new().unwrap();
+        let pk2 = PublicKey::new(sk2);
+
+        let cyph3 = encrypt(msg3_from_sum, pk2, sk1).unwrap();
+
+        let msg3_from_decrypt = decrypt(cyph3, sk2).unwrap();
+
+        assert_eq!(msg3_from_sum, msg3_from_decrypt)
+    }
+}
+
+#[test]
+fn test_encryption_cyphertext_sum() {
+    for _ in 0..10 {
+        let msg1 = Message::random().unwrap();
+        let msg2 = Message::random().unwrap();
+        let msg3_from_sum = (msg1 + msg2).unwrap();
+
+        let sk1 = PrivateKey::new().unwrap();
+        let sk2 = PrivateKey::new().unwrap();
+        let pk2 = PublicKey::new(sk2);
+
+        let cyph1 = encrypt(msg1, pk2, sk1).unwrap();
+        let cyph2 = encrypt(msg2, pk2, sk1).unwrap();
+        let cyph3_from_sum = (cyph1 + cyph2).unwrap();
+
+        let msg3_from_decrypt = decrypt(cyph3_from_sum, sk2).unwrap();
+
+        assert_eq!(msg3_from_sum, msg3_from_decrypt)
+    }
+}
+
+#[test]
+fn test_encryption_cyphertext_sum_2() {
+    for _ in 0..10 {
+        let msg1 = Message::random().unwrap();
+        let msg2 = Message::random().unwrap();
+        let msg3 = Message::random().unwrap();
+        let msg4_from_sum = ((msg1 + msg2).unwrap() + msg3).unwrap();
+
+        let sk1 = PrivateKey::new().unwrap();
+        let sk2 = PrivateKey::new().unwrap();
+        let pk2 = PublicKey::new(sk2);
+
+        let cyph1 = encrypt(msg1, pk2, sk1).unwrap();
+        let cyph2 = encrypt(msg2, pk2, sk1).unwrap();
+        let cyph3 = encrypt(msg3, pk2, sk1).unwrap();
+        let cyph4_from_sum = ((cyph1 + cyph2).unwrap() + cyph3).unwrap();
+
+        let msg4_from_decrypt = decrypt(cyph4_from_sum, sk2).unwrap();
+
+        assert_eq!(msg4_from_sum, msg4_from_decrypt)
+    }
 }
