@@ -1,3 +1,3 @@
 # elgamal-curve25519
 
-ElGamal encryption on Curve25519.
+ElGamal homomorphic encryption on Curve25519.
