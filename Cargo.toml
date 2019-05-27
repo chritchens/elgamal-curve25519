@@ -3,6 +3,15 @@ name = "elgamal-curve25519"
 version = "0.1.0"
 authors = ["chritchens <chritchens@gmail.com>"]
 edition = "2018"
+license = "MIT/Apache-2.0"
+repository = "https://github.com/chritchens/elgamal-curve25519"
+homepage = "https://github.com/chritchens/elgamal-curve25519"
+description = "A library for ElGamal homomorphic encryption"
+categories = ["cryptography"]
+
+[badges]
+travis-ci = { repository = "chritchens/elgamal-curve25519", branch = "master" }
+coveralls = { repository = "chritchens/elgamal-curve25519", branch = "master", service = "github" }
 
 [dependencies]
 rand_core = "~0.3"
