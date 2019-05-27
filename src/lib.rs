@@ -244,6 +244,41 @@ pub struct CypherText {
     delta: CompressedRistretto,
 }
 
+impl CypherText {
+    /// `from_bytes` creates a new `CypherText` from an array of bytes.
+    pub fn from_bytes(buf: [u8; 64]) -> Result<CypherText, String> {
+        let mut gamma_buf = [0u8; 32];
+        for (i, v) in buf[0..32].iter().enumerate() {
+            gamma_buf[i] = *v;
+        }
+
+        let mut delta_buf = [0u8; 32];
+        for (i, v) in buf[32..].iter().enumerate() {
+            delta_buf[i] = *v;
+        }
+
+        let gamma = PublicKey::from_slice(gamma_buf);
+        let delta = CompressedRistretto::from_slice(&delta_buf);
+
+        let cyph = CypherText { gamma, delta };
+        Ok(cyph)
+    }
+
+    /// `to_bytes` returns the `CypherText` as an array of bytes.
+    pub fn to_bytes(&self) -> [u8; 64] {
+        let mut buf = [0u8; 64];
+        for (i, v) in self.gamma.to_bytes().iter().enumerate() {
+            buf[i] = *v;
+        }
+
+        for (i, v) in self.gamma.to_bytes().iter().enumerate() {
+            buf[i+32] = *v;
+        }
+
+        buf
+    }
+}
+
 /// `shared` returns the shared key between a `PublicKey` and a `PrivateKey` of different `KeyPair`s.
 fn shared(pk: PublicKey, sk: PrivateKey) -> Result<CompressedRistretto, String> {
     if sk.to_public().to_point().ct_eq(&pk.to_point()).unwrap_u8() == 1u8 {
