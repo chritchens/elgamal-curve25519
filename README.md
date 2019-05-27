@@ -3,6 +3,7 @@
 [![Travis branch](https://img.shields.io/travis/chritchens/elgamal-curve25519/master.svg)](https://travis-ci.org/chritchens/elgamal-curve25519)
 [![Coveralls github branch](https://img.shields.io/coveralls/github/chritchens/elgamal-curve25519/master.svg)](https://coveralls.io/github/chritchens/elgamal-curve25519?branch=master)
 ![License](https://img.shields.io/badge/License-MIT%2FApache--2.0-blue.svg)
+[![Docs.rs](https://docs.rs/elgamal-curve25519/badge.svg)](https://docs.rs/elgamal-curve25519)
 
 ElGamal homomorphic encryption on Curve25519.
 
@@ -35,7 +36,7 @@ extern crate elgamal_curve25519; // old style
 use elgamal_curve25519; // new style
 ```
 
-At the moment see the tests for more information on how to use it in practice.
+You can read the [docs](https://docs.rs/elgamal-curve25519) and the tests for more information on how to use it in practice.
 
 ## License
 
