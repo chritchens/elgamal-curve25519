@@ -1,0 +1,40 @@
+dist: xenial
+
+sudo: required
+
+language: rust
+
+rust:
+  - nightly
+
+cache: cargo
+
+before_cache: |
+  if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
+    RUSTFLAGS="--cfg procmacro2_semver_exempt" cargo install cargo-tarpaulin --force
+  fi
+before_install:
+  - set -e
+  - rustup self update
+
+install:
+  #- echo "installing clippy"
+  #- rustup component add clippy
+  #- echo "clippy installed"
+
+script:
+  - cargo clean
+  - cargo build --verbose
+  #- cargo clippy --verbose
+  - cargo test --verbose
+
+after_script:
+  - set +e
+
+after_success: |
+  if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
+    cargo tarpaulin --ciserver travis-ci --coveralls $TRAVIS_JOB_ID
+  fi
+notifications:
+  email:
+on_success: never
