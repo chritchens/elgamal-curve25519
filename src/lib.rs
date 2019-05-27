@@ -108,8 +108,8 @@ impl PrivateKey {
         self.0
     }
 
-    /// `from_slice` creates a new `PrivateKey` from a slice of bytes.
-    pub fn from_slice(buf: [u8; 32]) -> Result<PrivateKey, String> {
+    /// `from_bytes` creates a new `PrivateKey` from a slice of bytes.
+    pub fn from_bytes(buf: [u8; 32]) -> Result<PrivateKey, String> {
         if let Some(scalar) = Scalar::from_canonical_bytes(buf) {
             let private = PrivateKey::from_scalar(scalar)?;
             Ok(private)
@@ -166,8 +166,8 @@ impl PublicKey {
         PublicKey(point.compress())
     }
 
-    /// `from_slice` creates a new `PublicKey` from a slice of bytes.
-    pub fn from_slice(buf: [u8; 32]) -> PublicKey {
+    /// `from_bytes` creates a new `PublicKey` from a slice of bytes.
+    pub fn from_bytes(buf: [u8; 32]) -> PublicKey {
         let point = CompressedRistretto::from_slice(&buf[..]);
         PublicKey(point)
     }
@@ -227,9 +227,9 @@ impl KeyPair {
         Ok(keys)
     }
 
-    /// `from_slice` creates a new `KeyPair` from a slice of bytes.
-    pub fn from_slice(buf: [u8; 32]) -> Result<KeyPair, String> {
-        let private_key = PrivateKey::from_slice(buf)?;
+    /// `from_bytes` creates a new `KeyPair` from a bytes of bytes.
+    pub fn from_bytes(buf: [u8; 32]) -> Result<KeyPair, String> {
+        let private_key = PrivateKey::from_bytes(buf)?;
         let public_key = private_key.to_public();
 
         let keys = KeyPair { public_key, private_key };
@@ -257,7 +257,7 @@ impl CypherText {
             delta_buf[i] = *v;
         }
 
-        let gamma = PublicKey::from_slice(gamma_buf);
+        let gamma = PublicKey::from_bytes(gamma_buf);
         let delta = CompressedRistretto::from_slice(&delta_buf);
 
         let cyph = CypherText { gamma, delta };
