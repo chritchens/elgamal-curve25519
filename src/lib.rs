@@ -1,3 +1,24 @@
+// Copyright 2019 Christian Nyumbayire. See the LICENSE-APACHE and
+// LICENSE-MIT files at the top-level directory.
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+
+//! # ElGamal Homomorphic Encryption Library
+//!
+//! A Rust library for [ElGamal Homomorphic Encryption](https://en.wikipedia.org/wiki/ElGamal_encryption). ElGamal encryption is only
+//! usable for small values (32 bytes) and so it's generally used in hybrid encryption
+//! schemes.<br>
+//! This library implements ElGamal multiplicative [homomorphic encryption](https://en.wikipedia.org/wiki/Homomorphic_encryption), so
+//! messages can be multiplicatevely aggregated by multiplying their cyphertexts.
+//! Aggregated cyphertexts can be decrypted only if they have the same recipient
+//! and only by that recipient.<br>
+//! The scheme has different applications, ranging from online voting systems to
+//! secure multy-party computation for cryptocurrencies.
+
 use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::ristretto::{RistrettoPoint, CompressedRistretto};
 use curve25519_dalek::constants::{BASEPOINT_ORDER, RISTRETTO_BASEPOINT_TABLE};
