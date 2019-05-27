@@ -100,6 +100,11 @@ pub struct PrivateKey(Scalar);
 impl PrivateKey {
     /// `new` creates a new random `PrivateKey`.
     pub fn new() -> Result<PrivateKey, String> {
+        PrivateKey::random()
+    }
+
+    /// `random` creates a random `PrivateKey`.
+    pub fn random() -> Result<PrivateKey, String> {
         let mut rng = OsRng::new()
             .map_err(|e| format!("{}", e))?;
 
@@ -182,6 +187,13 @@ impl PublicKey {
     /// `from_private` creates a new `PublicKey` from a `PrivateKey`.
     pub fn from_private(private: PrivateKey) -> PublicKey {
         private.to_public()
+    }
+
+    /// `random` creates a new random `PublicKey`.
+    pub fn random() -> Result<PublicKey, String> {
+        let sk = PrivateKey::random()?;
+        let pk = PublicKey::from_private(sk);
+        Ok(pk)
     }
 
     /// `from_point` creates a new `PublicKey` from a `CompressedRistretto`.
@@ -316,6 +328,15 @@ pub struct CypherText {
 }
 
 impl CypherText {
+    /// `random` creates a new random `CypherText`.
+    pub fn random() -> Result<CypherText, String> {
+        let gamma = PublicKey::random()?;
+        let delta = PublicKey::random()?.to_point();
+
+        let cyph = CypherText { gamma, delta };
+        Ok(cyph)
+    }
+
     /// `from_bytes` creates a new `CypherText` from an array of bytes.
     pub fn from_bytes(buf: [u8; 64]) -> Result<CypherText, String> {
         let mut gamma_buf = [0u8; 32];
@@ -498,4 +519,31 @@ fn test_encryption() {
 
         assert_eq!(msg1, msg2)
     }
+}
+
+#[test]
+fn test_message_add() {
+    let msg1 = Message::random().unwrap();
+    let msg2 = Message::random().unwrap();
+    let msg3 = (msg1 + msg2).unwrap();
+
+    let msg1_point = msg1.to_point().decompress().unwrap();
+    let msg2_point = msg2.to_point().decompress().unwrap();
+    let msg3_point = msg3.to_point().decompress().unwrap();
+
+    assert_eq!(msg3_point, msg1_point + msg2_point);
+}
+
+#[test]
+fn test_cyphertext_add() {
+    let cyph1 = CypherText::random().unwrap();
+    let cyph2 = CypherText::random().unwrap();
+    let cyph3 = (cyph1 + cyph2).unwrap();
+    let cyph3_gamma = (cyph1.gamma + cyph2.gamma).unwrap();
+    let cyph3_delta = (cyph1.delta.decompress().unwrap() +
+                       cyph2.delta.decompress().unwrap())
+                      .compress();
+
+    assert_eq!(cyph3.gamma, cyph3_gamma);
+    assert_eq!(cyph3.delta, cyph3_delta);
 }
