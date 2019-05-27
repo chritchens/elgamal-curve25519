@@ -6,6 +6,7 @@ use typenum::consts::U64;
 use rand_core::{RngCore, CryptoRng};
 use rand_os::OsRng;
 use subtle::ConstantTimeEq;
+use std::ops::{Mul, Add};
 
 /// `Message` is an ElGamal message.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
@@ -51,6 +52,41 @@ impl Message {
     /// `to_point` returns the inner `CompressedRistretto` of the `Message`.
     pub fn to_point(&self) -> CompressedRistretto {
         CompressedRistretto::from_slice(&self.0[..])
+    }
+}
+
+impl Mul<PrivateKey> for Message {
+    type Output = Option<Message>;
+
+    fn mul(self, sk: PrivateKey) -> Option<Message> {
+
+        if let Some(point) = self.to_point().decompress() {
+            let scalar = sk.to_scalar();
+            let point = (scalar * point).compress();
+            let msg = Message::from_point(&point);
+            Some(msg)
+        } else {
+            None
+        }
+    }
+}
+
+impl Add<Message> for Message {
+    type Output = Option<Message>;
+
+    fn add(self, other: Message) -> Option<Message> {
+
+        if let Some(point) = self.to_point().decompress() {
+            if let Some(other_point) = other.to_point().decompress() {
+                let point = (point + other_point).compress();
+                let msg = Message::from_point(&point);
+                Some(msg)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     }
 }
 
@@ -178,6 +214,41 @@ impl PublicKey {
     }
 }
 
+impl Mul<PrivateKey> for PublicKey {
+    type Output = Option<PublicKey>;
+
+    fn mul(self, sk: PrivateKey) -> Option<PublicKey> {
+
+        if let Some(point) = self.to_point().decompress() {
+            let scalar = sk.to_scalar();
+            let point = (scalar * point).compress();
+            let pk = PublicKey::from_point(point);
+            Some(pk)
+        } else {
+            None
+        }
+    }
+}
+
+impl Add<PublicKey> for PublicKey {
+    type Output = Option<PublicKey>;
+
+    fn add(self, other: PublicKey) -> Option<PublicKey> {
+
+        if let Some(point) = self.to_point().decompress() {
+            if let Some(other_point) = other.to_point().decompress() {
+                let point = (point + other_point).compress();
+                let pk = PublicKey::from_point(point);
+                Some(pk)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+}
+
 /// `KeyPair` is a pair of ElGamal `PublicKey` and `PrivateKey`.
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub struct KeyPair {
@@ -279,17 +350,38 @@ impl CypherText {
     }
 }
 
+impl Add<CypherText> for CypherText {
+    type Output = Option<CypherText>;
+
+    fn add(self, other: CypherText) -> Option<CypherText> {
+        if let Some(gamma) = self.gamma + other.gamma {
+            if let Some(delta_point) = self.delta.decompress() {
+                if let Some(other_delta_point) = other.delta.decompress() {
+                    let delta = (delta_point + other_delta_point).compress();
+                    let cyph = CypherText { gamma, delta };
+                    Some(cyph)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+}
+
 /// `shared` returns the shared key between a `PublicKey` and a `PrivateKey` of different `KeyPair`s.
 fn shared(pk: PublicKey, sk: PrivateKey) -> Result<CompressedRistretto, String> {
     if sk.to_public().to_point().ct_eq(&pk.to_point()).unwrap_u8() == 1u8 {
         return Err("same private keys".into());
     }
 
-    if let Some(pk_point) = pk.to_point().decompress() {
-        let sk_scalar = sk.to_scalar();
+    let shared = pk * sk;
 
-        let shared = pk_point * sk_scalar;
-        Ok(shared.compress())
+    if let Some(shared) = shared {
+        Ok(shared.to_point())
     } else {
         Err("invalid public key".into())
     }
