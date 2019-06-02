@@ -27,7 +27,17 @@ use typenum::consts::U64;
 use rand_core::{RngCore, CryptoRng};
 use rand_os::OsRng;
 use subtle::ConstantTimeEq;
+use std::result::Result as StdResult;
+//use std::error::Error as StdError;
 use std::ops::{Mul, Add};
+
+/// `Error` is the library error type.
+pub type Error = String;
+
+/// `Result` is the type used for fallible outputs. It's an
+/// alias to the Result type in standard library whith error
+/// the library Error type.
+pub type Result<T> = StdResult<T, Error>;
 
 /// `Message` is an ElGamal message.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
@@ -40,7 +50,7 @@ impl Message {
     }
 
     /// `random` creates a new random `Message`.
-    pub fn random() -> Result<Message, String> {
+    pub fn random() -> Result<Message> {
         let mut rng = OsRng::new()
             .map_err(|e| format!("{}", e))?;
 
@@ -120,12 +130,12 @@ pub struct PrivateKey(Scalar);
 
 impl PrivateKey {
     /// `new` creates a new random `PrivateKey`.
-    pub fn new() -> Result<PrivateKey, String> {
+    pub fn new() -> Result<PrivateKey> {
         PrivateKey::random()
     }
 
     /// `random` creates a random `PrivateKey`.
-    pub fn random() -> Result<PrivateKey, String> {
+    pub fn random() -> Result<PrivateKey> {
         let mut rng = OsRng::new()
             .map_err(|e| format!("{}", e))?;
 
@@ -134,7 +144,7 @@ impl PrivateKey {
 
     /// `from_rng` creates a new random `PrivateKey`, but requires
     /// to specify a random generator.
-    pub fn from_rng<R>(mut rng: &mut R) -> Result<PrivateKey, String>
+    pub fn from_rng<R>(mut rng: &mut R) -> Result<PrivateKey>
         where R: RngCore + CryptoRng
     {
         let mut scalar = Scalar::random(&mut rng).reduce();
@@ -156,7 +166,7 @@ impl PrivateKey {
 
     /// `from_scalar` creates a new `PrivateKey` from a `Scalar`.
     /// The `Scalar` value cannot be 0.
-    pub fn from_scalar(scalar: Scalar) -> Result<PrivateKey, String> {
+    pub fn from_scalar(scalar: Scalar) -> Result<PrivateKey> {
         if scalar.ct_eq(&Scalar::zero()).unwrap_u8() == 1u8 {
             return Err("0 scalar".into());
         }
@@ -171,7 +181,7 @@ impl PrivateKey {
     }
 
     /// `from_bytes` creates a new `PrivateKey` from a slice of bytes.
-    pub fn from_bytes(buf: [u8; 32]) -> Result<PrivateKey, String> {
+    pub fn from_bytes(buf: [u8; 32]) -> Result<PrivateKey> {
         if let Some(scalar) = Scalar::from_canonical_bytes(buf) {
             let private = PrivateKey::from_scalar(scalar)?;
             Ok(private)
@@ -227,7 +237,7 @@ impl PublicKey {
     }
 
     /// `random` creates a new random `PublicKey`.
-    pub fn random() -> Result<PublicKey, String> {
+    pub fn random() -> Result<PublicKey> {
         let sk = PrivateKey::random()?;
         let pk = PublicKey::from_private(sk);
         Ok(pk)
@@ -307,7 +317,7 @@ pub struct KeyPair {
 
 impl KeyPair {
     /// `new` creates a new random `KeyPair`.
-    pub fn new() -> Result<KeyPair, String> {
+    pub fn new() -> Result<KeyPair> {
         let private_key = PrivateKey::new()?;
         let public_key = private_key.to_public();
 
@@ -317,7 +327,7 @@ impl KeyPair {
 
     /// `from_rng` creates a new random `KeyPair`, but requires
     /// to specify a random generator.
-    pub fn from_rng<R>(mut rng: &mut R) -> Result<KeyPair, String>
+    pub fn from_rng<R>(mut rng: &mut R) -> Result<KeyPair>
         where R: RngCore + CryptoRng
     {
         let private_key = PrivateKey::from_rng(&mut rng)?;
@@ -339,7 +349,7 @@ impl KeyPair {
 
     /// `from_scalar` creates a new `KeyPair` from a `Scalar`.
     /// The `Scalar` value cannot be 0.
-    pub fn from_scalar(scalar: Scalar) -> Result<KeyPair, String> {
+    pub fn from_scalar(scalar: Scalar) -> Result<KeyPair> {
         let private_key = PrivateKey::from_scalar(scalar)?;
         let public_key = private_key.to_public();
 
@@ -348,7 +358,7 @@ impl KeyPair {
     }
 
     /// `from_bytes` creates a new `KeyPair` from a bytes of bytes.
-    pub fn from_bytes(buf: [u8; 32]) -> Result<KeyPair, String> {
+    pub fn from_bytes(buf: [u8; 32]) -> Result<KeyPair> {
         let private_key = PrivateKey::from_bytes(buf)?;
         let public_key = private_key.to_public();
 
@@ -366,7 +376,7 @@ pub struct CypherText {
 
 impl CypherText {
     /// `random` creates a new random `CypherText`.
-    pub fn random() -> Result<CypherText, String> {
+    pub fn random() -> Result<CypherText> {
         let gamma = PublicKey::random()?;
         let delta = PublicKey::random()?.to_point();
 
@@ -375,7 +385,7 @@ impl CypherText {
     }
 
     /// `from_bytes` creates a new `CypherText` from an array of bytes.
-    pub fn from_bytes(buf: [u8; 64]) -> Result<CypherText, String> {
+    pub fn from_bytes(buf: [u8; 64]) -> Result<CypherText> {
         let mut gamma_buf = [0u8; 32];
         for (i, v) in buf[0..32].iter().enumerate() {
             gamma_buf[i] = *v;
@@ -431,7 +441,7 @@ impl Add<CypherText> for CypherText {
 }
 
 /// `shared` returns the shared key between a `PublicKey` and a `PrivateKey` of different `KeyPair`s.
-fn shared(pk: PublicKey, sk: PrivateKey) -> Result<CompressedRistretto, String> {
+fn shared(pk: PublicKey, sk: PrivateKey) -> Result<CompressedRistretto> {
     if sk.to_public().to_point().ct_eq(&pk.to_point()).unwrap_u8() == 1u8 {
         return Err("same private keys".into());
     }
@@ -446,7 +456,7 @@ fn shared(pk: PublicKey, sk: PrivateKey) -> Result<CompressedRistretto, String> 
 }
 
 /// `inverse_shared` returns the inverse of the shared point by using the Lagrange's Theorem.
-fn inverse_shared(pk: PublicKey, sk: PrivateKey) -> Result<CompressedRistretto, String> {
+fn inverse_shared(pk: PublicKey, sk: PrivateKey) -> Result<CompressedRistretto> {
     if sk.to_public().to_point().ct_eq(&pk.to_point()).unwrap_u8() == 1u8 {
         return Err("same private keys".into());
     }
@@ -462,7 +472,7 @@ fn inverse_shared(pk: PublicKey, sk: PrivateKey) -> Result<CompressedRistretto, 
 }
 
 /// `encrypt` encrypts a `Message` into a `CypherText`.
-pub fn encrypt(msg: Message, pk: PublicKey, sk: PrivateKey) -> Result<CypherText, String> {
+pub fn encrypt(msg: Message, pk: PublicKey, sk: PrivateKey) -> Result<CypherText> {
     if sk.to_public().to_point().ct_eq(&pk.to_point()).unwrap_u8() == 1u8 {
         return Err("same private keys".into());
     }
@@ -483,7 +493,7 @@ pub fn encrypt(msg: Message, pk: PublicKey, sk: PrivateKey) -> Result<CypherText
 }
 
 /// `decrypt` decrypts a `CypherText` into a `Message`.
-pub fn decrypt(cyph: CypherText, sk: PrivateKey) -> Result<Message, String> {
+pub fn decrypt(cyph: CypherText, sk: PrivateKey) -> Result<Message> {
     if sk.to_public().to_point().ct_eq(&cyph.gamma.to_point()).unwrap_u8() == 1u8 {
         return Err("same private keys".into());
     }
