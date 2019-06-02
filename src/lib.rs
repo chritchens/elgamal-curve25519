@@ -27,17 +27,44 @@ use typenum::consts::U64;
 use rand_core::{RngCore, CryptoRng};
 use rand_os::OsRng;
 use subtle::ConstantTimeEq;
-use std::result::Result as StdResult;
+use std::fmt;
+use std::error;
+use std::result;
 //use std::error::Error as StdError;
 use std::ops::{Mul, Add};
 
 /// `Error` is the library error type.
-pub type Error = String;
+#[derive(Debug)]
+pub enum Error {
+    IO { msg: String, source: Option<Box<dyn error::Error + 'static>> },
+    Scalar { msg: String, source: Option<Box<dyn error::Error + 'static>> },
+    PrivateKey { msg: String, source: Option<Box<dyn error::Error + 'static>>},
+    PublicKey { msg: String, source: Option<Box<dyn error::Error + 'static>>},
+    Keys { msg: String, source: Option<Box<dyn error::Error + 'static>>},
+    SharedSecret { msg: String, source: Option<Box<dyn error::Error + 'static>>},
+    Message { msg: String, source: Option<Box<dyn error::Error + 'static>>},
+    CypherText { msg: String, source: Option<Box<dyn error::Error + 'static>>},
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Error::IO { msg, .. }=> write!(f, "IO: {}", msg),
+            Error::Scalar { msg, .. } => write!(f, "Scalar: {}", msg),
+            Error::PrivateKey { msg, .. } => write!(f, "PrivateKey: {}", msg),
+            Error::PublicKey { msg, .. } => write!(f, "PublicKey: {}", msg),
+            Error::Keys { msg, .. } => write!(f, "Keys: {}", msg),
+            Error::SharedSecret { msg, .. } => write!(f, "SharedSecret: {}", msg),
+            Error::Message { msg, .. } => write!(f, "Message: {}", msg),
+            Error::CypherText { msg, .. } => write!(f, "CypherText: {}", msg),
+        }
+    }
+}
 
 /// `Result` is the type used for fallible outputs. It's an
 /// alias to the Result type in standard library whith error
 /// the library Error type.
-pub type Result<T> = StdResult<T, Error>;
+pub type Result<T> = result::Result<T, Error>;
 
 /// `Message` is an ElGamal message.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
@@ -52,7 +79,11 @@ impl Message {
     /// `random` creates a new random `Message`.
     pub fn random() -> Result<Message> {
         let mut rng = OsRng::new()
-            .map_err(|e| format!("{}", e))?;
+            .map_err(|e| {
+                let msg = format!("{}", e);
+                let source = Some(Box::new(e) as Box<dyn error::Error + 'static>);
+                Error::IO { msg, source }
+            })?;
 
         let msg = Message::from_rng(&mut rng);
         Ok(msg)
@@ -137,7 +168,11 @@ impl PrivateKey {
     /// `random` creates a random `PrivateKey`.
     pub fn random() -> Result<PrivateKey> {
         let mut rng = OsRng::new()
-            .map_err(|e| format!("{}", e))?;
+            .map_err(|e| {
+                let msg = format!("{}", e);
+                let source = Some(Box::new(e) as Box<dyn error::Error + 'static>);
+                Error::IO { msg, source }
+            })?;
 
         PrivateKey::from_rng(&mut rng)
     }
@@ -168,7 +203,10 @@ impl PrivateKey {
     /// The `Scalar` value cannot be 0.
     pub fn from_scalar(scalar: Scalar) -> Result<PrivateKey> {
         if scalar.ct_eq(&Scalar::zero()).unwrap_u8() == 1u8 {
-            return Err("0 scalar".into());
+            let msg = "scalar is 0".into();
+            let source = None;
+            let err = Error::Scalar { msg, source };
+            return Err(err);
         }
 
         let private = PrivateKey(scalar);
@@ -186,7 +224,10 @@ impl PrivateKey {
             let private = PrivateKey::from_scalar(scalar)?;
             Ok(private)
         } else {
-            Err("not canonical bytes".into())
+            let msg = "not canonical bytes".into();
+            let source = None;
+            let err = Error::Scalar { msg, source };
+            Err(err)
         }
     }
 
@@ -443,7 +484,10 @@ impl Add<CypherText> for CypherText {
 /// `shared` returns the shared key between a `PublicKey` and a `PrivateKey` of different `KeyPair`s.
 fn shared(pk: PublicKey, sk: PrivateKey) -> Result<CompressedRistretto> {
     if sk.to_public().to_point().ct_eq(&pk.to_point()).unwrap_u8() == 1u8 {
-        return Err("same private keys".into());
+        let msg = "same private keys".into();
+        let source = None;
+        let err = Error::Keys { msg, source };
+        return Err(err);
     }
 
     let shared = pk * sk;
@@ -451,14 +495,20 @@ fn shared(pk: PublicKey, sk: PrivateKey) -> Result<CompressedRistretto> {
     if let Some(shared) = shared {
         Ok(shared.to_point())
     } else {
-        Err("invalid public key".into())
+        let msg = "invalid public key".into();
+        let source = None;
+        let err = Error::PublicKey { msg, source };
+        Err(err)
     }
 }
 
 /// `inverse_shared` returns the inverse of the shared point by using the Lagrange's Theorem.
 fn inverse_shared(pk: PublicKey, sk: PrivateKey) -> Result<CompressedRistretto> {
     if sk.to_public().to_point().ct_eq(&pk.to_point()).unwrap_u8() == 1u8 {
-        return Err("same private keys".into());
+        let msg = "same private keys".into();
+        let source = None;
+        let err = Error::Keys { msg, source };
+        return Err(err);
     }
 
     if let Some(pk_point) = pk.to_point().decompress() {
@@ -467,14 +517,20 @@ fn inverse_shared(pk: PublicKey, sk: PrivateKey) -> Result<CompressedRistretto> 
         let inv_shared = pk_point * (BASEPOINT_ORDER - sk_scalar);
         Ok(inv_shared.compress())
     } else {
-        Err("invalid public key".into())
+        let msg = "invalid public key".into();
+        let source = None;
+        let err = Error::PublicKey { msg, source };
+        Err(err)
     }
 }
 
 /// `encrypt` encrypts a `Message` into a `CypherText`.
 pub fn encrypt(msg: Message, pk: PublicKey, sk: PrivateKey) -> Result<CypherText> {
     if sk.to_public().to_point().ct_eq(&pk.to_point()).unwrap_u8() == 1u8 {
-        return Err("same private keys".into());
+        let msg = "same private keys".into();
+        let source = None;
+        let err = Error::Keys { msg, source };
+        return Err(err);
     }
 
     if let Some(msg_point) = msg.to_point().decompress() {
@@ -485,17 +541,26 @@ pub fn encrypt(msg: Message, pk: PublicKey, sk: PrivateKey) -> Result<CypherText
             let cyph = CypherText { gamma, delta };
             Ok(cyph)
         } else {
-            Err("invalid shared secret".into())
+            let msg = "invalid shared secret".into();
+            let source = None;
+            let err = Error::SharedSecret { msg, source };
+            Err(err)
         }
     } else {
-        Err("invalid message".into())
+        let msg = "same message".into();
+        let source = None;
+        let err = Error::Message { msg, source };
+        Err(err)
     }
 }
 
 /// `decrypt` decrypts a `CypherText` into a `Message`.
 pub fn decrypt(cyph: CypherText, sk: PrivateKey) -> Result<Message> {
     if sk.to_public().to_point().ct_eq(&cyph.gamma.to_point()).unwrap_u8() == 1u8 {
-        return Err("same private keys".into());
+        let msg = "same private keys".into();
+        let source = None;
+        let err = Error::Keys { msg, source };
+        return Err(err);
     }
 
     if let Some(delta_point) = cyph.delta.decompress() {
@@ -505,10 +570,16 @@ pub fn decrypt(cyph: CypherText, sk: PrivateKey) -> Result<Message> {
             let msg = Message::from_point(&msg_point);
             Ok(msg)
         } else {
-            Err("invalid shared secret".into())
+            let msg = "invalid shared secret".into();
+            let source = None;
+            let err = Error::SharedSecret { msg, source };
+            Err(err)
         }
     } else {
-        Err("invalid cyphertext".into())
+        let msg = "invalid cyphertext".into();
+        let source = None;
+        let err = Error::CypherText { msg, source };
+        Err(err)
     }
 }
 
