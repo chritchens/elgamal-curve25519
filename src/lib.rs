@@ -451,7 +451,7 @@ impl CypherText {
             buf[i] = *v;
         }
 
-        for (i, v) in self.gamma.to_bytes().iter().enumerate() {
+        for (i, v) in self.delta.to_bytes().iter().enumerate() {
             buf[i+32] = *v;
         }
 
